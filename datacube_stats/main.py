@@ -269,8 +269,7 @@ class StatsApp(object):  # pylint: disable=too-many-instance-attributes
         self._ensure_unique_output_product_names()
         self._check_consistent_measurements()
 
-        for task_list in self.task_generator:
-            assert callable(task_list)
+        assert callable(self.task_generator)
         assert callable(self.output_driver)
         assert hasattr(self.output_driver, 'open_output_files')
         assert hasattr(self.output_driver, 'write_data')
@@ -361,12 +360,11 @@ class StatsApp(object):  # pylint: disable=too-many-instance-attributes
         """
         is_iterative = all(op.is_iterative() for op in output_products.values())
 
-        for task_list in self.task_generator:
-            for task in task_list(index=self.index, date_ranges=self.date_ranges,
-                                  sources_spec=self.sources):
-                task.output_products = output_products
-                task.is_iterative = is_iterative
-                yield task
+        for task in self.task_generator(index=self.index, date_ranges=self.date_ranges,
+                                        sources_spec=self.sources):
+            task.output_products = output_products
+            task.is_iterative = is_iterative
+            yield task
 
     def configure_outputs(self, metadata_type='eo'):
         """
