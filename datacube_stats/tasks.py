@@ -22,40 +22,47 @@ _LOG = logging.getLogger(__name__)
 
 
 def select_task_generator(input_region, storage, filter_product):
+    task_generator = []
     if input_region is None or input_region == {}:
         _LOG.info('No input_region specified. Generating full available spatial region, gridded files.')
-        return GriddedTaskGenerator(storage)
+        task_generator.append(GriddedTaskGenerator(storage))
     elif 'feature_id' in input_region:
         _LOG.info('Generating date filtered polygon images.')
         feature, geom_feat, crs_txt, geometry = geom_from_file(input_region['from_file'], input_region['feature_id'])
         input_region['geom_feat'] = geom_feat
         input_region['crs_txt'] = crs_txt
-        return NonGriddedTaskGenerator(input_region=input_region, filter_product=filter_product,
-                                       geopolygon=geometry, feature=feature, storage=storage)
+        task_generator.append(NonGriddedTaskGenerator(input_region=input_region, filter_product=filter_product,
+                                                      geopolygon=geometry, feature=feature, storage=storage))
 
     elif 'tile' in input_region:  # For one tile
-        return GriddedTaskGenerator(storage, tile_indexes=[input_region['tile']])
+        task_generator.append(GriddedTaskGenerator(storage, tile_indexes=[input_region['tile']]))
 
     elif 'tiles' in input_region:  # List of tiles
-        return GriddedTaskGenerator(storage, tile_indexes=input_region['tiles'])
+        task_generator.append(GriddedTaskGenerator(storage, tile_indexes=input_region['tiles']))
 
     elif 'geometry' in input_region:  # Larger spatial region
         # A large, multi-tile input region, specified as geojson. Output will be individual tiles.
         _LOG.info('Found geojson `input_region`, outputing tiles.')
 
         geometry = Geometry(input_region['geometry'], CRS('EPSG:4326'))  # GeoJSON is always 4326
-        return GriddedTaskGenerator(storage, geopolygon=geometry)
+        task_generator.append(GriddedTaskGenerator(storage, geopolygon=geometry))
 
     elif 'from_file' in input_region:
         _LOG.info('Input spatial region specified by file: %s', input_region['from_file'])
 
-        geometry = boundary_polygon_from_file(input_region['from_file'])
-        return GriddedTaskGenerator(storage, geopolygon=geometry)
-
+        feature, geom_feat, crs_txt, geometry = geom_from_file(input_region['from_file'], None)
+        input_region['crs_txt'] = crs_txt
+        for a_feature, a_geo in zip(feature, geom_feat):
+            input_region['geom_feat'] = a_geo
+            input_region['feature_id'] = a_feature['ID']
+            task_generator.append(NonGriddedTaskGenerator(input_region=input_region.copy(),
+                                                          filter_product=filter_product, geopolygon=a_geo,
+                                                          feature=a_feature, storage=storage))
     else:
         _LOG.info('Generating statistics for an ungridded `input region`. Output as a single file.')
-        return NonGriddedTaskGenerator(input_region=input_region, storage=storage,
-                                       filter_product=filter_product, geopolygon=None, feature=None)
+        task_generator.append(NonGriddedTaskGenerator(input_region=input_region, storage=storage,
+                                                      filter_product=filter_product, geopolygon=None, feature=None))
+    return task_generator
 
 
 def boundary_polygon_from_file(filename):
@@ -225,7 +232,7 @@ class NonGriddedTaskGenerator(object):
         :return: new task in case of filtering
         """
         all_source_times = list()
-        if self.filter_product is not None:
+        if self.filter_product is not None and self.filter_product != {}:
             for sr in task.sources:
                 v = sr.data
                 all_source_times = (all_source_times +
@@ -235,6 +242,10 @@ class NonGriddedTaskGenerator(object):
                 get_filter_product(self.filter_product, self.feature, all_source_times, date_ranges)
             _LOG.info("Filtered times %s", filtered_times)
             task = self.set_task(task, filtered_times, extra_fn_args)
+        else:
+            task.geom_feat = self.input_region['geom_feat']
+            task.crs_txt = self.input_region['crs_txt']
+            task.extra_fn_params = {'feature_id': str(self.input_region['feature_id'])}
         return task
 
     def __call__(self, index, sources_spec, date_ranges):
