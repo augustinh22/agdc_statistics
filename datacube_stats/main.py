@@ -363,7 +363,7 @@ class StatsApp(object):  # pylint: disable=too-many-instance-attributes
 
         for task_list in self.task_generator:
             for task in task_list(index=self.index, date_ranges=self.date_ranges,
-                                       sources_spec=self.sources):
+                                  sources_spec=self.sources):
                 task.output_products = output_products
                 task.is_iterative = is_iterative
                 yield task
