@@ -1,6 +1,5 @@
 import logging
 
-import fiona
 from datacube import Datacube
 from datacube.api import GridWorkflow, Tile
 from datacube.api.query import query_group_by, query_geopolygon
@@ -78,18 +77,6 @@ def boundary_geo_polygon(geometry, crs):
     joined = shapely.ops.unary_union(list(shape(geom) for geom in geometry))
     final = joined.convex_hull
     boundary_polygon = Geometry(mapping(final), crs)
-    return boundary_polygon
-
-
-def boundary_polygon_from_file(filename):
-    # TODO: This should be refactored and moved into datacube.utils.geometry
-    import shapely.ops
-    from shapely.geometry import shape, mapping
-    with fiona.open(filename) as input_region:
-        joined = shapely.ops.unary_union(list(shape(geom['geometry']) for geom in input_region))
-        final = joined.convex_hull
-        crs = CRS(input_region.crs_wkt)
-        boundary_polygon = Geometry(mapping(final), crs)
     return boundary_polygon
 
 
