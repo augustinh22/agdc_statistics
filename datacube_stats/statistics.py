@@ -140,8 +140,10 @@ class WofsStats(Statistic):
         is_integer_type = np.issubdtype(data.water.dtype, np.integer)
 
         if not is_integer_type:
-            raise StatsProcessingError("Attempting to count bit flags on non-integer data. Provided data is: {}"
-                                       .format(data.water))
+            data = data.astype('uint8')
+
+            # raise StatsProcessingError("Attempting to count bit flags on non-integer data. Provided data is: {}"
+            #                            .format(data.water))
 
         # 128 == clear and wet, 132 == clear and wet and masked for sea
         # The PQ sea mask that we use is dodgy and should be ignored. It excludes lots of useful data
