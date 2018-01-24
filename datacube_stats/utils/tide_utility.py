@@ -33,7 +33,8 @@ def geom_from_file(filename, feature_id):
         crs = CRS(input_region.crs_wkt)
         for feature in input_region:
             if feature_id is not None and feature_id != {}:
-                if feature['properties']['ID'] in feature_id:
+                properties = feature['properties']
+                if properties.get('ID') in feature_id or properties.get('id') in feature_id:
                     geom = feature['geometry']
                     return feature['properties'], geom, input_region.crs_wkt, Geometry(geom, crs)
             else:
