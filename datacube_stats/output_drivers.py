@@ -127,8 +127,9 @@ class OutputDriver(with_metaclass(RegisterDriver)):
               'time': 1}
           'dimension_order': ['time', 'y', 'x']}
     :param app_info:
+    :param valid_extensions: List[str] = []
     """
-    valid_extensions: List[str] = []
+    
 
     def __init__(self, task, storage, output_path, app_info=None, global_attributes=None, var_attributes=None):
         self._storage = storage
